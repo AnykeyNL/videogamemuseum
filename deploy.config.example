@@ -18,6 +18,5 @@ LETSENCRYPT_EMAIL="admin@example.com"
 INCLUDE_WWW="false"
 
 # Local port the Node app listens on. NGINX reverse-proxies to this.
-# (Matches the default in build-character/server.mjs.)
-APP_PORT="3847"
-
+# (Matches the default in build-your-own-game/server.mjs.)
+APP_PORT="3848"

@@ -26,7 +26,7 @@ then open the URL it prints (for example `http://127.0.0.1:3848/` for the build-
 
 ## Deploying (Ubuntu 24.04)
 
-`install.sh` provisions a fresh Ubuntu 24.04 server: it installs NGINX and Node.js, runs `build-character/server.mjs` as a systemd service bound to localhost, puts NGINX in front of it as a reverse proxy, and obtains a Let's Encrypt SSL certificate (with HTTP -> HTTPS redirect) for a domain you configure.
+`install.sh` provisions a fresh Ubuntu 24.04 server: it installs NGINX and Node.js, runs `build-your-own-game/server.mjs` as a systemd service bound to localhost, puts NGINX in front of it as a reverse proxy, and obtains a Let's Encrypt SSL certificate (with HTTP -> HTTPS redirect) for a domain you configure.
 
 ```
 cp deploy.config.example deploy.config   # set DOMAIN and LETSENCRYPT_EMAIL

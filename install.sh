@@ -2,7 +2,7 @@
 #
 # Install script for Ubuntu 24.04.
 #
-# Installs NGINX, installs Node.js, runs build-character/server.mjs as a
+# Installs NGINX, installs Node.js, runs build-your-own-game/server.mjs as a
 # systemd service bound to localhost, configures NGINX as a reverse proxy in
 # front of it, and obtains a Let's Encrypt SSL certificate for the domain
 # defined in ./deploy.config (with HTTP -> HTTPS redirect).
@@ -16,10 +16,10 @@ set -euo pipefail
 
 # --- locate ourselves -------------------------------------------------------
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="${ROOT_DIR}/build-character"
+APP_DIR="${ROOT_DIR}/build-your-own-game"
 CONFIG_FILE="${ROOT_DIR}/deploy.config"
 
-SERVICE_NAME="build-character"
+SERVICE_NAME="build-your-own-game"
 SERVICE_USER="museumapp"
 NGINX_SITE="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
 NODE_MAJOR=20
@@ -37,10 +37,8 @@ source "$CONFIG_FILE"
 
 : "${DOMAIN:?Set DOMAIN in deploy.config}"
 : "${LETSENCRYPT_EMAIL:?Set LETSENCRYPT_EMAIL in deploy.config}"
-APP_PORT="${APP_PORT:-3847}"
+APP_PORT="${APP_PORT:-3848}"
 INCLUDE_WWW="${INCLUDE_WWW:-false}"
-OPENAI_API_KEY="${OPENAI_API_KEY:-}"
-GEMINI_API_KEY="${GEMINI_API_KEY:-}"
 
 [ "$DOMAIN" != "example.com" ] || die "Set a real DOMAIN in deploy.config (not example.com)."
 
@@ -70,15 +68,13 @@ if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   log "Creating system user ${SERVICE_USER}"
   useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
-# The app writes generated runs into build-character/output/, so the service
-# user needs ownership of the app directory.
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"
 
 # --- systemd service --------------------------------------------------------
 log "Writing systemd service: ${SERVICE_NAME}"
 {
   echo "[Unit]"
-  echo "Description=Build Character (C64 museum exhibit)"
+  echo "Description=Build Your Own Game (C64 museum kiosk)"
   echo "After=network.target"
   echo
   echo "[Service]"
@@ -88,8 +84,6 @@ log "Writing systemd service: ${SERVICE_NAME}"
   echo "ExecStart=${NODE_BIN} ${APP_DIR}/server.mjs"
   echo "Environment=PORT=${APP_PORT}"
   echo "Environment=LISTEN_HOST=127.0.0.1"
-  [ -n "$OPENAI_API_KEY" ] && echo "Environment=OPENAI_API_KEY=${OPENAI_API_KEY}"
-  [ -n "$GEMINI_API_KEY" ] && echo "Environment=GEMINI_API_KEY=${GEMINI_API_KEY}"
   echo "Restart=on-failure"
   echo "RestartSec=3"
   echo "NoNewPrivileges=true"
@@ -115,9 +109,6 @@ server {
     listen 80;
     listen [::]:80;
     server_name ${SERVER_NAMES};
-
-    # Webcam photo uploads can be a few MB.
-    client_max_body_size 12m;
 
     location / {
         proxy_pass http://127.0.0.1:${APP_PORT};
