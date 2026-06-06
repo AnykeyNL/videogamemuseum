@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BUILD YOUR OWN GAME *** C64</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="crt-frame">
+    <div class="crt-screen" data-palette="blue">
+      <div class="scanlines" aria-hidden="true"></div>
+
+      <!-- Boot -->
+      <section id="screen-boot" class="screen active" aria-label="Commodore 64 boot sequence">
+        <pre id="boot-text" class="boot-output"></pre><span id="boot-cursor" class="cursor-blink" aria-hidden="true">█</span>
+      </section>
+
+      <!-- Language select -->
+      <section id="screen-language" class="screen" aria-hidden="true">
+        <div class="lang-inner">
+          <pre class="ascii-logo" aria-hidden="true">
+ ██████╗  █████╗ ███╗   ███╗███████╗
+██╔════╝ ██╔══██╗████╗ ████║██╔════╝
+██║  ███╗███████║██╔████╔██║█████╗  
+██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  
+╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗
+ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
+</pre>
+          <p class="lang-sub">nationaalvideogamemuseum © 2026</p>
+          <p class="lang-prompt blink">SELECT LANGUAGE / KIES TAAL / SPRACHE / LANGUE</p>
+          <div id="lang-grid" class="lang-grid" role="group" aria-label="Language selection"></div>
+        </div>
+      </section>
+
+      <!-- Build step (reused for all 5 questions) -->
+      <section id="screen-step" class="screen" aria-hidden="true">
+        <div class="step-head">
+          <span id="step-counter" class="step-counter">STEP 1/5</span>
+          <span id="step-hours" class="step-hours">0.0 H</span>
+        </div>
+
+        <div id="step-question" class="step-question">
+          <h2 id="step-title" class="step-title">QUESTION</h2>
+          <div id="step-options" class="options-grid" role="group" aria-label="Options"></div>
+        </div>
+
+        <div id="step-typing" class="step-typing hidden" aria-hidden="true">
+          <h2 id="typing-title" class="typing-title">10 PRINT</h2>
+          <div id="typing-scroll" class="typing-scroll">
+            <pre id="typing-code" class="typing-code"></pre><span id="typing-cursor" class="cursor-blink">█</span>
+          </div>
+          <p id="typing-hours" class="typing-hours"></p>
+          <button type="button" id="btn-next" class="c64-btn c64-btn-primary hidden">NEXT &gt;</button>
+        </div>
+      </section>
+
+      <!-- Name your game -->
+      <section id="screen-name" class="screen" aria-hidden="true">
+        <div class="name-inner">
+          <h2 id="name-title" class="name-title">NAME YOUR GAME</h2>
+          <div class="name-field">
+            <span class="name-prompt-char">&gt;</span>
+            <input id="name-input" class="name-input" type="text" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          </div>
+          <p id="name-examples-label" class="name-examples-label">EXAMPLES:</p>
+          <div id="name-examples" class="name-examples"></div>
+          <button type="button" id="btn-save" class="c64-btn c64-btn-primary">SAVE &amp; RUN</button>
+          <p id="name-hint" class="name-hint"></p>
+        </div>
+      </section>
+
+      <!-- Compile -->
+      <section id="screen-compile" class="screen" aria-hidden="true">
+        <div class="compile-inner">
+          <h2 id="compile-title" class="compile-title">READY.</h2>
+          <pre id="compile-log" class="compile-log"></pre>
+          <p id="compile-total" class="compile-total"></p>
+          <button type="button" id="btn-run" class="c64-btn c64-btn-primary hidden">RUN</button>
+        </div>
+      </section>
+
+      <!-- Game -->
+      <section id="screen-game" class="screen" aria-hidden="true">
+        <div class="status-bar">
+          <span id="status-left" class="status-score">0</span>
+          <span id="status-mid" class="status-mid">TIME 0:00</span>
+          <span id="status-right" class="status-score">0</span>
+        </div>
+        <div class="game-stage">
+          <canvas id="game-canvas" width="640" height="400" aria-label="Playfield"></canvas>
+        </div>
+        <p id="game-hint" class="game-hint"></p>
+        <p id="game-msg" class="game-msg hidden"></p>
+      </section>
+
+      <!-- Results -->
+      <section id="screen-results" class="screen" aria-hidden="true">
+        <div class="results-inner">
+          <h2 id="results-title" class="results-title">GAME OVER</h2>
+          <p id="results-body" class="results-body"></p>
+          <p id="results-countdown" class="results-countdown blink"></p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="content.js"></script>
+  <script src="games.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

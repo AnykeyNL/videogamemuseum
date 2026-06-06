@@ -1,0 +1,28 @@
+# Copy this file to "deploy.config" and edit the values, then run ./install.sh
+#
+#   cp deploy.config.example deploy.config
+#   nano deploy.config
+#   sudo ./install.sh
+#
+# Lines are plain shell variable assignments (no spaces around "=").
+
+# Domain name that will point at this server (REQUIRED).
+# Make sure its DNS A/AAAA record already points to this machine's public IP.
+DOMAIN="example.com"
+
+# Email used by Let's Encrypt for registration and renewal warnings (REQUIRED).
+LETSENCRYPT_EMAIL="admin@example.com"
+
+# Also include the www. sub-domain in the certificate? ("true" or "false").
+# Only enable this if www.<DOMAIN> also points at this server.
+INCLUDE_WWW="false"
+
+# Local port the Node app listens on. NGINX reverse-proxies to this.
+# (Matches the default in build-character/server.mjs.)
+APP_PORT="3847"
+
+# Optional API keys. Leave blank to use whatever is already hardcoded in
+# build-character/server.mjs. If set, they are passed to the service as
+# environment variables (which take precedence is up to the app).
+OPENAI_API_KEY=""
+GEMINI_API_KEY=""
