@@ -20,7 +20,7 @@ APP_DIR="${ROOT_DIR}/build-your-own-game"
 CONFIG_FILE="${ROOT_DIR}/deploy.config"
 
 SERVICE_NAME="build-your-own-game"
-SERVICE_USER="museumapp"
+INSTALL_DIR="/opt/${SERVICE_NAME}"
 NGINX_SITE="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
 NODE_MAJOR=20
 
@@ -40,6 +40,11 @@ source "$CONFIG_FILE"
 APP_PORT="${APP_PORT:-3848}"
 INCLUDE_WWW="${INCLUDE_WWW:-false}"
 
+# The app is copied to /opt (world-traversable) and run as a dedicated, locked
+# down system user. Running from a home directory would fail because system
+# users can't traverse into /home/<user> (systemd "CHDIR Permission denied").
+SERVICE_USER="${SERVICE_USER:-museumapp}"
+
 [ "$DOMAIN" != "example.com" ] || die "Set a real DOMAIN in deploy.config (not example.com)."
 
 export DEBIAN_FRONTEND=noninteractive
@@ -47,7 +52,7 @@ export DEBIAN_FRONTEND=noninteractive
 # --- packages ---------------------------------------------------------------
 log "Updating apt and installing base packages"
 apt-get update -y
-apt-get install -y ca-certificates curl gnupg nginx
+apt-get install -y ca-certificates curl gnupg nginx rsync
 
 # --- Node.js ----------------------------------------------------------------
 if ! command -v node >/dev/null 2>&1 || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 18 ]; then
@@ -68,7 +73,16 @@ if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   log "Creating system user ${SERVICE_USER}"
   useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"
+log "Running service as user: ${SERVICE_USER}"
+
+# --- copy the app into /opt -------------------------------------------------
+log "Installing app into ${INSTALL_DIR}"
+install -d -m 0755 "$INSTALL_DIR"
+rsync -a --delete \
+  --exclude ".git" \
+  --exclude "node_modules" \
+  "${APP_DIR}/" "${INSTALL_DIR}/"
+chown -R "$SERVICE_USER":"$SERVICE_USER" "$INSTALL_DIR"
 
 # --- systemd service --------------------------------------------------------
 log "Writing systemd service: ${SERVICE_NAME}"
@@ -80,8 +94,8 @@ log "Writing systemd service: ${SERVICE_NAME}"
   echo "[Service]"
   echo "Type=simple"
   echo "User=${SERVICE_USER}"
-  echo "WorkingDirectory=${APP_DIR}"
-  echo "ExecStart=${NODE_BIN} ${APP_DIR}/server.mjs"
+  echo "WorkingDirectory=${INSTALL_DIR}"
+  echo "ExecStart=${NODE_BIN} ${INSTALL_DIR}/server.mjs"
   echo "Environment=PORT=${APP_PORT}"
   echo "Environment=LISTEN_HOST=127.0.0.1"
   echo "Restart=on-failure"
@@ -147,7 +161,9 @@ nginx -t
 systemctl reload nginx
 
 log "Done!"
+echo "  App dir : ${INSTALL_DIR}  (copied from ${APP_DIR})"
 echo "  Service : systemctl status ${SERVICE_NAME}"
 echo "  Logs    : journalctl -u ${SERVICE_NAME} -f"
 echo "  Site    : https://${DOMAIN}/"
 echo "  Renewal : certbot auto-renews via its systemd timer (certbot renew --dry-run to test)."
+echo "  Update  : re-run sudo ./install.sh to re-sync the app into ${INSTALL_DIR}."

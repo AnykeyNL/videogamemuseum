@@ -20,3 +20,8 @@ INCLUDE_WWW="false"
 # Local port the Node app listens on. NGINX reverse-proxies to this.
 # (Matches the default in build-your-own-game/server.mjs.)
 APP_PORT="3848"
+
+# OS user the systemd service runs as. The app is copied to /opt and runs as
+# this dedicated, locked-down system user (created automatically if missing).
+# Usually no need to change this.
+#SERVICE_USER="museumapp"
