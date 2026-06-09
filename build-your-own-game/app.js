@@ -95,6 +95,7 @@
   const OPTION_COLS = 2;
   let resultTimer = null;
   let lastActivity = Date.now();
+  let isDeepLink = false; // launched via a direct QR/share link (skip the build flow + QR results)
 
   Games.init({
     canvas: $("game-canvas"),
@@ -738,6 +739,7 @@
       palette: PALETTES.indexOf(palette) !== -1 ? palette : "blue",
       gameName: rawName,
     };
+    isDeepLink = true;
     showTitle();
     return true;
   }
@@ -758,6 +760,12 @@
   }
 
   function onGameEnd(res) {
+    // Direct-link sessions loop back to this game's own title screen instead of
+    // showing the QR results page and restarting the whole build-your-own flow.
+    if (isDeepLink) {
+      showTitle();
+      return;
+    }
     showResults(res);
   }
 
@@ -945,8 +953,9 @@
     if (state === "game") {
       Games.quit();
       lastActivity = Date.now();
-    } else if (state === "step" || state === "name" || state === "compile" || state === "title") {
-      // Note: "results" is intentionally excluded -- its own 2-minute countdown governs it.
+    } else if (state === "step" || state === "name" || state === "compile") {
+      // Note: "results" is excluded (its own 2-minute countdown governs it) and
+      // "title" is excluded (deep-link sessions should stay on their own title).
       reset();
       lastActivity = Date.now();
     }
