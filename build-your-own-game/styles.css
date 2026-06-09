@@ -732,11 +732,11 @@ body {
 }
 
 .touch-controls.active {
-  --touch-size: clamp(44px, 13vmin, 64px);
+  --touch-size: clamp(40px, 12vmin, 60px);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: calc(var(--c64-unit) * 1);
+  gap: calc(var(--c64-unit) * 0.8);
   margin-top: calc(var(--c64-unit) * 0.6);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   flex-shrink: 0;
@@ -745,12 +745,70 @@ body {
   touch-action: none;
 }
 
-.touch-dpad {
-  display: grid;
-  grid-template-columns: repeat(3, var(--touch-size, 58px));
-  grid-template-rows: repeat(3, var(--touch-size, 58px));
+/* In two-player mode shrink a touch so both controllers fit side by side. */
+.touch-controls.active.two {
+  --touch-size: clamp(34px, 9.5vmin, 52px);
+}
+
+.touch-player {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: calc(var(--c64-unit) * 0.4);
 }
+
+.touch-player.hidden {
+  display: none;
+}
+
+.touch-label {
+  font-family: "Press Start 2P", monospace;
+  font-size: var(--fs-game-hint);
+  color: var(--scr-accent, var(--c64-cyan));
+  text-align: center;
+}
+
+.touch-label.hidden {
+  display: none;
+}
+
+.touch-cluster {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(var(--c64-unit) * 0.6);
+}
+
+.touch-dpad {
+  display: grid;
+  gap: calc(var(--c64-unit) * 0.35);
+}
+
+/* directional layouts: cross (4-way), lr (left/right only), ud (up/down only) */
+.touch-dpad.cross {
+  grid-template-columns: repeat(3, var(--touch-size));
+  grid-template-rows: repeat(3, var(--touch-size));
+}
+.touch-dpad.cross .t-up { grid-area: 1 / 2 / 2 / 3; }
+.touch-dpad.cross .t-left { grid-area: 2 / 1 / 3 / 2; }
+.touch-dpad.cross .t-right { grid-area: 2 / 3 / 3 / 4; }
+.touch-dpad.cross .t-down { grid-area: 3 / 2 / 4 / 3; }
+
+.touch-dpad.lr {
+  grid-template-columns: repeat(2, var(--touch-size));
+  grid-template-rows: var(--touch-size);
+}
+.touch-dpad.lr .t-left { grid-area: 1 / 1; }
+.touch-dpad.lr .t-right { grid-area: 1 / 2; }
+
+.touch-dpad.ud {
+  grid-template-columns: var(--touch-size);
+  grid-template-rows: repeat(2, var(--touch-size));
+}
+.touch-dpad.ud .t-up { grid-area: 1 / 1; }
+.touch-dpad.ud .t-down { grid-area: 2 / 1; }
 
 .touch-action {
   display: flex;
@@ -759,7 +817,7 @@ body {
 
 .touch-btn {
   font-family: "Press Start 2P", monospace;
-  font-size: clamp(14px, 4vmin, 22px);
+  font-size: clamp(12px, 3.4vmin, 20px);
   color: var(--scr-hi, var(--c64-yellow));
   background: var(--scr-bg, var(--c64-blue));
   border: 2px solid var(--scr-fg, var(--c64-light-blue));
@@ -781,14 +839,9 @@ body {
   display: none;
 }
 
-.t-up { grid-area: 1 / 2 / 2 / 3; }
-.t-left { grid-area: 2 / 1 / 3 / 2; }
-.t-right { grid-area: 2 / 3 / 3 / 4; }
-.t-down { grid-area: 3 / 2 / 4 / 3; }
-
 .t-fire {
-  width: calc(var(--touch-size, 58px) * 1.5);
-  height: calc(var(--touch-size, 58px) * 1.5);
+  width: calc(var(--touch-size) * 1.4);
+  height: calc(var(--touch-size) * 1.4);
   border-radius: 50%;
   color: var(--scr-accent, var(--c64-cyan));
 }

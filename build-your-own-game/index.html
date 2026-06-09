@@ -106,14 +106,33 @@
         <p id="game-hint" class="game-hint"></p>
         <p id="game-msg" class="game-msg hidden"></p>
         <div id="touch-controls" class="touch-controls" aria-hidden="true">
-          <div class="touch-dpad">
-            <button type="button" class="touch-btn t-up" data-code="ArrowUp" aria-label="Up">&#9650;</button>
-            <button type="button" class="touch-btn t-left" data-code="ArrowLeft" aria-label="Left">&#9664;</button>
-            <button type="button" class="touch-btn t-right" data-code="ArrowRight" aria-label="Right">&#9654;</button>
-            <button type="button" class="touch-btn t-down" data-code="ArrowDown" aria-label="Down">&#9660;</button>
+          <div class="touch-player" data-player="1">
+            <span class="touch-label hidden">P1</span>
+            <div class="touch-cluster">
+              <div class="touch-dpad">
+                <button type="button" class="touch-btn t-up" aria-label="P1 Up">&#9650;</button>
+                <button type="button" class="touch-btn t-left" aria-label="P1 Left">&#9664;</button>
+                <button type="button" class="touch-btn t-right" aria-label="P1 Right">&#9654;</button>
+                <button type="button" class="touch-btn t-down" aria-label="P1 Down">&#9660;</button>
+              </div>
+              <div class="touch-action">
+                <button type="button" class="touch-btn t-fire" aria-label="P1 Fire">&#9679;</button>
+              </div>
+            </div>
           </div>
-          <div class="touch-action">
-            <button type="button" class="touch-btn t-fire" data-code="Space" aria-label="Fire">&#9679;</button>
+          <div class="touch-player hidden" data-player="2">
+            <span class="touch-label hidden">P2</span>
+            <div class="touch-cluster">
+              <div class="touch-dpad">
+                <button type="button" class="touch-btn t-up" aria-label="P2 Up">&#9650;</button>
+                <button type="button" class="touch-btn t-left" aria-label="P2 Left">&#9664;</button>
+                <button type="button" class="touch-btn t-right" aria-label="P2 Right">&#9654;</button>
+                <button type="button" class="touch-btn t-down" aria-label="P2 Down">&#9660;</button>
+              </div>
+              <div class="touch-action">
+                <button type="button" class="touch-btn t-fire" aria-label="P2 Fire">&#9679;</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -60,6 +60,7 @@
   const titlePlay = $("title-play");
   const touchControls = $("touch-controls");
   const touchButtons = touchControls ? Array.from(touchControls.querySelectorAll(".touch-btn")) : [];
+  const touchPanels = touchControls ? Array.from(touchControls.querySelectorAll(".touch-player")) : [];
   const IS_TOUCH =
     (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches) ||
     "ontouchstart" in window ||
@@ -126,27 +127,79 @@
   }
 
   /* ---------- on-screen touch controls (mobile) ---------- */
-  // Only the buttons a given game actually uses are shown. Codes match the
-  // single-player keyboard scheme each engine reads.
-  function touchSchemeFor(c) {
-    if (c.genre === "shooter") return { ArrowLeft: 1, ArrowRight: 1, Space: 1 };
-    if (c.genre === "maze") return { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1 };
-    if (c.genre === "dodge") return { ArrowLeft: 1, ArrowRight: 1 };
-    // paddle: breakout moves left/right, pong / pong-vs-cpu move up/down
-    const breakout = c.players === 1 && !c.enemies;
-    return breakout ? { ArrowLeft: 1, ArrowRight: 1 } : { ArrowUp: 1, ArrowDown: 1 };
+  // Per-player key codes matching what each engine reads. idx 0 = player 1.
+  function playerKeys1P(c) {
+    if (c.genre === "shooter") return { left: "ArrowLeft", right: "ArrowRight", fire: "Space" };
+    if (c.genre === "maze") return { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
+    if (c.genre === "dodge") return { left: "ArrowLeft", right: "ArrowRight" };
+    // paddle: breakout moves left/right, pong-vs-cpu moves up/down
+    return !c.enemies ? { left: "ArrowLeft", right: "ArrowRight" } : { up: "ArrowUp", down: "ArrowDown" };
+  }
+
+  function playerKeys2P(c, idx) {
+    if (c.genre === "shooter") {
+      return idx === 0
+        ? { left: "KeyA", right: "KeyD", fire: "Space" }
+        : { left: "ArrowLeft", right: "ArrowRight", fire: "Enter" };
+    }
+    if (c.genre === "maze") {
+      return idx === 0
+        ? { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" }
+        : { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
+    }
+    if (c.genre === "dodge") {
+      return idx === 0 ? { left: "KeyA", right: "KeyD" } : { left: "ArrowLeft", right: "ArrowRight" };
+    }
+    // paddle pong: left paddle = W/S, right paddle = arrows
+    return idx === 0 ? { up: "KeyW", down: "KeyS" } : { up: "ArrowUp", down: "ArrowDown" };
+  }
+
+  function configurePanel(panel, keys, showLabel) {
+    panel.classList.remove("hidden");
+    const label = panel.querySelector(".touch-label");
+    if (label) label.classList.toggle("hidden", !showLabel);
+    const setBtn = (cls, code) => {
+      const b = panel.querySelector(cls);
+      if (!b) return;
+      if (code) {
+        b.setAttribute("data-code", code);
+        b.classList.remove("hidden");
+      } else {
+        b.removeAttribute("data-code");
+        b.classList.add("hidden");
+      }
+    };
+    setBtn(".t-up", keys.up);
+    setBtn(".t-down", keys.down);
+    setBtn(".t-left", keys.left);
+    setBtn(".t-right", keys.right);
+    setBtn(".t-fire", keys.fire);
+    const horiz = keys.left || keys.right;
+    const vert = keys.up || keys.down;
+    const dpad = panel.querySelector(".touch-dpad");
+    if (dpad) {
+      dpad.classList.remove("cross", "lr", "ud");
+      dpad.classList.add(horiz && vert ? "cross" : vert ? "ud" : "lr");
+    }
   }
 
   function applyTouchScheme() {
-    const sc = touchSchemeFor(config);
-    touchButtons.forEach((b) => {
-      b.classList.toggle("hidden", !sc[b.getAttribute("data-code")]);
-    });
+    releaseTouchKeys();
+    const twoP = config.players === 2;
+    touchControls.classList.toggle("two", twoP);
+    if (twoP) {
+      configurePanel(touchPanels[0], playerKeys2P(config, 0), true);
+      configurePanel(touchPanels[1], playerKeys2P(config, 1), true);
+    } else {
+      configurePanel(touchPanels[0], playerKeys1P(config), false);
+      if (touchPanels[1]) touchPanels[1].classList.add("hidden");
+    }
   }
 
   function releaseTouchKeys() {
     touchButtons.forEach((b) => {
-      Games.setKey(b.getAttribute("data-code"), false);
+      const code = b.getAttribute("data-code");
+      if (code) Games.setKey(code, false);
       b.classList.remove("pressed");
     });
   }
@@ -967,9 +1020,11 @@
   btnRun.addEventListener("click", launchGame);
 
   /* ---------- touch control wiring ---------- */
+  // data-code is assigned per game/player in applyTouchScheme, so read it live.
   touchButtons.forEach((b) => {
-    const code = b.getAttribute("data-code");
     const press = (e) => {
+      const code = b.getAttribute("data-code");
+      if (!code) return;
       e.preventDefault();
       markActivity();
       Games.setKey(code, true);
@@ -977,7 +1032,8 @@
     };
     const release = (e) => {
       if (e && e.cancelable) e.preventDefault();
-      Games.setKey(code, false);
+      const code = b.getAttribute("data-code");
+      if (code) Games.setKey(code, false);
       b.classList.remove("pressed");
     };
     b.addEventListener("pointerdown", press);
