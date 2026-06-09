@@ -19,6 +19,7 @@
     step: $("screen-step"),
     name: $("screen-name"),
     compile: $("screen-compile"),
+    title: $("screen-title"),
     game: $("screen-game"),
     results: $("screen-results"),
   };
@@ -52,6 +53,24 @@
   const resultsTitle = $("results-title");
   const resultsBody = $("results-body");
   const resultsCountdown = $("results-countdown");
+  const qrCanvas = $("qr-canvas");
+  const qrLabel = $("qr-label");
+  const titleName = $("title-name");
+  const titleSub = $("title-sub");
+  const titlePlay = $("title-play");
+
+  const SHARE_BASE_URL = "https://museum.makerdad.nl/";
+  const GENRES = ["shooter", "maze", "dodge", "paddle"];
+  const THEMES = ["space", "jungle", "castle", "neon"];
+  const SPEEDS = ["chill", "normal", "fast", "turbo"];
+  const PALETTES = ["blue", "green", "amber", "mono"];
+  // High-contrast two-tone colours per palette so the QR stays scannable but on-theme.
+  const QR_COLORS = {
+    blue: { light: "#cfd0ff", dark: "#101034" },
+    green: { light: "#bdffc8", dark: "#04160b" },
+    amber: { light: "#ffe1a6", dark: "#241300" },
+    mono: { light: "#f0f0ff", dark: "#050510" },
+  };
 
   const IDLE_MS = 90000;
 
@@ -191,11 +210,11 @@
       lines.push(s);
       ln += 10;
     };
-    const dataBlock = (title, count, perLine) => {
+    const dataBlock = (title, count, perLine, base) => {
       lines.push("");
       lines.push(ln + " REM ===== " + title + " =====");
       ln += 10;
-      lines.push(ln + " FOR I=0 TO " + (count * perLine - 1) + " : READ B : POKE 832+I,B : NEXT");
+      lines.push(ln + " FOR I=0 TO " + (count * perLine - 1) + " : READ B : POKE " + base + "+I,B : NEXT");
       ln += 10;
       for (let r = 0; r < count; r++) {
         const vals = [];
@@ -203,32 +222,75 @@
         push(ln + " DATA " + vals.join(","));
       }
     };
+    const rem = (t) => {
+      lines.push("");
+      lines.push(ln + " REM ===== " + t + " =====");
+      ln += 10;
+    };
 
-    // size scales with the typing-hours estimate -> bigger choices, more code
-    const spriteRows = Math.round(opt.hours * 1.5) + 2;
-    const soundRows = Math.round(opt.hours * 0.75) + 1;
-    const levelRows = Math.round(opt.hours * 1) + 2;
+    const id = (QUESTIONS[idx] && QUESTIONS[idx].id) || "mode";
 
-    dataBlock("SPRITE SHAPES", spriteRows, 8);
-    dataBlock("SOUND TABLE (SID)", soundRows, 7);
-    dataBlock("SCREEN / LEVEL MAP", levelRows, 10);
+    if (id === "mode") {
+      // step 1: full-length sprite/sound/level listing + main loop (unchanged)
+      const spriteRows = Math.round(opt.hours * 1.5) + 2;
+      const soundRows = Math.round(opt.hours * 0.75) + 1;
+      const levelRows = Math.round(opt.hours * 1) + 2;
+      dataBlock("SPRITE SHAPES", spriteRows, 8, 832);
+      dataBlock("SOUND TABLE (SID)", soundRows, 7, 832);
+      dataBlock("SCREEN / LEVEL MAP", levelRows, 10, 832);
+      lines.push("");
+      lines.push(ln + " REM ===== MAIN LOOP =====");
+      ln += 10;
+      const loopLines = [
+        'GET K$ : IF K$="" THEN ' + (ln + 10),
+        'IF K$="Z" THEN X=X-1',
+        'IF K$="X" THEN X=X+1',
+        "POKE 53248,X : POKE 53249,Y",
+        "S=S+1 : IF S>255 THEN S=0",
+        "POKE 1024+P,32 : P=X/8+Y/8*40 : POKE 1024+P,81",
+        "IF C=1 THEN GOSUB 5000 : REM CHECK HIT",
+        "IF SC>HI THEN HI=SC",
+        'PRINT "{HOME}SCORE ";SC;"  HI ";HI',
+      ];
+      loopLines.forEach((s) => push(ln + " " + s));
+      push(ln + " GOTO " + (ln - loopLines.length * 10));
+    } else if (id === "genre") {
+      // step 2: game-rules + enemy logic
+      rem("GAME RULES");
+      push(ln + " IF FIRE AND AMMO>0 THEN GOSUB 8000");
+      push(ln + " IF COL=1 THEN LV=LV-1 : GOSUB 8200");
+      push(ln + " IF SC>NEXTUP THEN XL=XL+1 : NEXTUP=NEXTUP+500");
+      push(ln + ' IF LV<1 THEN PRINT "GAME OVER" : END');
+      dataBlock("ENEMY WAVE TABLE", Math.round(opt.hours * 0.8) + 2, 8, 2048);
+      rem("ENEMY MOVE PATTERN");
+      push(ln + " FOR E=0 TO NE : EX(E)=EX(E)+MV(E) : NEXT");
+      push(ln + " RETURN");
+    } else if (id === "theme") {
+      // step 3: custom characters / tiles + colours
+      rem("CHARSET / TILES");
+      push(ln + " POKE 53272,(PEEK(53272)AND240)OR12");
+      dataBlock("TILE BITMAPS", Math.round(opt.hours * 1.5) + 2, 8, 12288);
+      rem("PAINT BACKGROUND");
+      push(ln + " FOR P=0 TO 999 : POKE 55296+P,CB : NEXT");
+      push(ln + " RETURN");
+    } else if (id === "speed") {
+      // step 4: raster-interrupt timing
+      rem("TIMING / RASTER IRQ");
+      push(ln + " POKE 56334,PEEK(56334)AND254");
+      push(ln + " POKE 53265,PEEK(53265)AND127");
+      push(ln + " POKE 53274,RS : REM RASTER LINE");
+      dataBlock("FRAME DELAY TABLE", Math.round(opt.hours * 1.5) + 2, 6, 49152);
+      push(ln + " POKE 56334,PEEK(56334)OR1");
+      push(ln + " RETURN");
+    } else {
+      // step 5: colour registers / palette
+      rem("COLOUR REGISTERS");
+      push(ln + " POKE 53280,BC : POKE 53281,SC");
+      dataBlock("SPRITE COLOURS", Math.round(opt.hours * 4) + 2, 8, 53287);
+      push(ln + " FOR C=0 TO 7 : POKE 53287+C,PC(C) : NEXT");
+      push(ln + " RETURN");
+    }
 
-    lines.push("");
-    lines.push(ln + " REM ===== MAIN LOOP =====");
-    ln += 10;
-    const loopLines = [
-      "GET K$ : IF K$=\"\" THEN " + (ln + 10),
-      "IF K$=\"Z\" THEN X=X-1",
-      "IF K$=\"X\" THEN X=X+1",
-      "POKE 53248,X : POKE 53249,Y",
-      "S=S+1 : IF S>255 THEN S=0",
-      "POKE 1024+P,32 : P=X/8+Y/8*40 : POKE 1024+P,81",
-      "IF C=1 THEN GOSUB 5000 : REM CHECK HIT",
-      "IF SC>HI THEN HI=SC",
-      "PRINT \"{HOME}SCORE \";SC;\"  HI \";HI",
-    ];
-    loopLines.forEach((s) => push(ln + " " + s));
-    push(ln + " GOTO " + (ln - loopLines.length * 10));
     lines.push("");
     lines.push(ln + " REM END OF LISTING - PHEW!");
 
@@ -337,6 +399,44 @@
     showStep();
   }
 
+  /* ---------- players-question sprites ---------- */
+  function spriteRects(rects, ox) {
+    return rects
+      .map((r) => '<rect x="' + (ox + r[0]) + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '"/>')
+      .join("");
+  }
+  function spritePerson(ox) {
+    return spriteRects(
+      [[6, 2, 4, 4], [5, 6, 6, 5], [3, 7, 2, 4], [11, 7, 2, 4], [5, 11, 2, 4], [9, 11, 2, 4]],
+      ox,
+    );
+  }
+  function spriteInvader(ox) {
+    return spriteRects(
+      [[4, 2, 2, 2], [10, 2, 2, 2], [3, 4, 10, 2], [2, 6, 12, 2], [4, 8, 2, 2], [7, 8, 2, 2], [10, 8, 2, 2]],
+      ox,
+    );
+  }
+  function modeIconSVG(players, enemies) {
+    let x = 0;
+    let people = "";
+    for (let i = 0; i < players; i++) {
+      people += spritePerson(x);
+      x += 14;
+    }
+    let invader = "";
+    if (enemies) {
+      invader = spriteInvader(x);
+      x += 16;
+    }
+    return (
+      '<svg class="sprite" viewBox="0 0 ' + x + ' 16" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+      '<g fill="var(--scr-hi, #ffff80)">' + people + "</g>" +
+      (enemies ? '<g fill="var(--scr-accent, #80ffff)">' + invader + "</g>" : "") +
+      "</svg>"
+    );
+  }
+
   /* ---------- build steps ---------- */
   function showStep() {
     showScreen("step");
@@ -364,6 +464,13 @@
       btn.appendChild(key);
       btn.appendChild(label);
       btn.appendChild(desc);
+      if (q.id === "mode") {
+        const icon = document.createElement("span");
+        icon.className = "option-icon";
+        icon.innerHTML = modeIconSVG(opt.set.players, opt.set.enemies);
+        btn.appendChild(icon);
+        btn.classList.add("has-icon");
+      }
       btn.addEventListener("click", () => chooseOption(i));
       btn.addEventListener("mouseenter", () => setSelectedOption(i));
       stepOptions.appendChild(btn);
@@ -515,6 +622,95 @@
     btnRun.classList.remove("hidden");
   }
 
+  /* ---------- share link + QR ---------- */
+  function getSpeedFactor(speedId) {
+    const q = QUESTIONS.find((qq) => qq.id === "speed");
+    const o = q && q.options.find((oo) => oo.set.speed === speedId);
+    return o ? o.set.speedFactor : 1;
+  }
+
+  function labelFor(questionId, key, value) {
+    const q = QUESTIONS.find((qq) => qq.id === questionId);
+    if (!q) return "";
+    const o = q.options.find((oo) => oo.set[key] === value);
+    return o ? o.label[lang] || o.label.en : "";
+  }
+
+  function buildGameUrl(cfg, lg) {
+    const q = new URLSearchParams();
+    q.set("l", lg);
+    q.set("p", String(cfg.players));
+    q.set("e", cfg.enemies ? "1" : "0");
+    q.set("g", cfg.genre);
+    q.set("t", cfg.theme);
+    q.set("s", cfg.speed);
+    q.set("c", cfg.palette);
+    if (cfg.gameName) q.set("n", cfg.gameName);
+    return SHARE_BASE_URL + "?" + q.toString();
+  }
+
+  function drawQR(canvas, text, paletteId) {
+    if (!window.QRCode) return;
+    let m;
+    try {
+      m = window.QRCode.encode(text);
+    } catch (_) {
+      return;
+    }
+    const colors = QR_COLORS[paletteId] || QR_COLORS.blue;
+    const quiet = 4;
+    const dim = m.size + quiet * 2;
+    const scale = Math.max(3, Math.floor(560 / dim));
+    canvas.width = dim * scale;
+    canvas.height = dim * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = colors.light;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = colors.dark;
+    for (let y = 0; y < m.size; y++) {
+      for (let x = 0; x < m.size; x++) {
+        if (m.modules[y][x]) ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale);
+      }
+    }
+  }
+
+  /* ---------- deep-link title screen (opened from a QR code) ---------- */
+  function tryDeepLink() {
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("g");
+    if (!g || GENRES.indexOf(g) === -1) return false;
+
+    const lg = params.get("l");
+    if (lg && I18N[lg]) {
+      lang = lg;
+      L = I18N[lg];
+    }
+    const theme = params.get("t");
+    const speed = params.get("s");
+    const palette = params.get("c");
+    const rawName = (params.get("n") || "").toUpperCase().slice(0, 16);
+    config = {
+      players: params.get("p") === "2" ? 2 : 1,
+      enemies: params.get("e") === "1",
+      genre: g,
+      theme: THEMES.indexOf(theme) !== -1 ? theme : "space",
+      speed: SPEEDS.indexOf(speed) !== -1 ? speed : "normal",
+      speedFactor: getSpeedFactor(SPEEDS.indexOf(speed) !== -1 ? speed : "normal"),
+      palette: PALETTES.indexOf(palette) !== -1 ? palette : "blue",
+      gameName: rawName,
+    };
+    showTitle();
+    return true;
+  }
+
+  function showTitle() {
+    showScreen("title");
+    applyPalette(config.palette);
+    titleName.textContent = config.gameName || "MY C64 GAME";
+    titleSub.textContent = labelFor("genre", "genre", config.genre);
+    titlePlay.textContent = L.titlePlay;
+  }
+
   /* ---------- game ---------- */
   function launchGame() {
     showScreen("game");
@@ -534,6 +730,7 @@
     else if (res.outcome === "lose") title = L.resultLose;
     else if (res.outcome === "p1") title = L.resultP1Win;
     else if (res.outcome === "p2") title = L.resultP2Win;
+    else if (res.outcome === "quit") title = L.resultEnded || L.resultTimeUp;
     resultsTitle.textContent = title;
 
     let scoreLine;
@@ -545,7 +742,10 @@
     const namePart = config.gameName ? '"' + config.gameName + '"  ·  ' : "";
     resultsBody.textContent = namePart + scoreLine + "  ·  " + L.resultsThanks;
 
-    let n = 7;
+    drawQR(qrCanvas, buildGameUrl(config, lang), config.palette);
+    qrLabel.textContent = L.scanToPlay;
+
+    let n = 120;
     resultsCountdown.textContent = fmt(L.returning, { n });
     if (resultTimer) clearInterval(resultTimer);
     resultTimer = setInterval(() => {
@@ -585,7 +785,9 @@
     if (isQuitKey && state !== "boot" && state !== "language") {
       if (!(e.metaKey || e.ctrlKey || e.altKey)) {
         e.preventDefault();
-        reset();
+        // Quitting a running game should still show the results + QR page.
+        if (state === "game") Games.quit();
+        else reset();
         return;
       }
     }
@@ -678,6 +880,11 @@
         e.preventDefault();
         launchGame();
       }
+    } else if (state === "title") {
+      if (e.code === "Space" || e.code === "Enter") {
+        e.preventDefault();
+        launchGame();
+      }
     } else if (state === "results") {
       if (e.code === "Space" || e.code === "Enter") {
         e.preventDefault();
@@ -686,13 +893,21 @@
     }
   });
 
+  screens.title.addEventListener("click", () => {
+    if (state === "title") launchGame();
+  });
+
   document.addEventListener("click", markActivity);
   document.addEventListener("mousemove", markActivity);
   document.addEventListener("touchstart", markActivity, { passive: true });
 
   setInterval(() => {
     if (Date.now() - lastActivity < IDLE_MS) return;
-    if (state === "step" || state === "name" || state === "compile" || state === "results") {
+    if (state === "game") {
+      Games.quit();
+      lastActivity = Date.now();
+    } else if (state === "step" || state === "name" || state === "compile" || state === "title") {
+      // Note: "results" is intentionally excluded -- its own 2-minute countdown governs it.
       reset();
       lastActivity = Date.now();
     }
@@ -708,5 +923,5 @@
 
   /* ---------- start ---------- */
   buildLanguageGrid();
-  runBoot();
+  if (!tryDeepLink()) runBoot();
 })();

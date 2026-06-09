@@ -232,11 +232,13 @@ window.Games = (function () {
       E.enemies = [];
       E.dir = 1;
       E.spawnTimer = 0;
-      lives = cfg.enemies ? (cfg.players === 2 ? 5 : 3) : -1;
+      E.hitInv = 0;
+      lives = cfg.enemies ? 3 : -1;
       spawnWave();
     },
     update(dt) {
       const s = sf();
+      if (E.hitInv > 0) E.hitInv -= dt;
       E.ships.forEach((sh) => {
         if (down(sh.left)) sh.x -= 3.2 * s * dt;
         if (down(sh.right)) sh.x += 3.2 * s * dt;
@@ -311,6 +313,18 @@ window.Games = (function () {
           if (cfg.enemies) loseLife();
         }
       });
+      // enemy ships crashing into a player ship -> lose a life (with brief invulnerability)
+      if (cfg.enemies && E.hitInv <= 0) {
+        E.ships.forEach((sh) => {
+          E.enemies.forEach((e) => {
+            if (e.alive && aabb(sh.x - sh.w / 2, sh.y - 12, sh.w, 24, e.x - 12, e.y - 8, 24, 16)) {
+              e.alive = false;
+              E.hitInv = 60;
+              loseLife();
+            }
+          });
+        });
+      }
       // next wave
       if (E.enemies.every((e) => !e.alive)) spawnWave();
     },
@@ -330,6 +344,7 @@ window.Games = (function () {
       ctx.fillStyle = C.accent;
       E.ebullets.forEach((b) => ctx.fillRect(b.x - 2, b.y - 2, 4, 8));
       E.ships.forEach((sh) => {
+        if (E.hitInv > 0 && (((E.hitInv / 6) | 0) % 2 === 0)) return;
         ctx.fillStyle = sh.color;
         ctx.beginPath();
         ctx.moveTo(sh.x, sh.y - 12);
@@ -388,7 +403,21 @@ window.Games = (function () {
       E.chasers = [];
       if (cfg.enemies) {
         const n = cfg.players === 2 ? 3 : 2;
-        for (let i = 0; i < n; i++) E.chasers.push({ x: W / 2 + i * 20, y: H / 2, color: C.fg });
+        const spots = [
+          [W / 2, H / 2],
+          [W / 2 - 48, H / 2 + 40],
+          [W / 2 + 48, H / 2 - 40],
+        ];
+        for (let i = 0; i < n; i++) {
+          // the first chaser is the slow one (and shown in the accent colour)
+          const slow = i === 0;
+          E.chasers.push({
+            x: spots[i][0],
+            y: spots[i][1],
+            spd: slow ? 0.6 : 1,
+            color: slow ? C.accent : C.fg,
+          });
+        }
       }
       lives = E.players[0].lives;
     },
@@ -420,11 +449,23 @@ window.Games = (function () {
       // chasers
       E.chasers.forEach((ch) => {
         const target = nearestPlayer(ch);
-        if (!target) return;
-        const ax = Math.sign(target.x - ch.x) * 1.5 * s * dt;
-        const ay = Math.sign(target.y - ch.y) * 1.5 * s * dt;
-        if (!moveBlocked(ch, ax, 0, 12)) moveBlocked(ch, 0, ay, 12);
-        else moveBlocked(ch, 0, ay, 12);
+        if (target) {
+          const sp = 1.5 * (ch.spd || 1) * s * dt;
+          moveBlocked(ch, Math.sign(target.x - ch.x) * sp, 0, 12);
+          moveBlocked(ch, 0, Math.sign(target.y - ch.y) * sp, 12);
+        }
+        // separation: keep chasers from stacking on the same spot
+        E.chasers.forEach((other) => {
+          if (other === ch) return;
+          const dx = ch.x - other.x;
+          const dy = ch.y - other.y;
+          const d = Math.hypot(dx, dy);
+          if (d > 0.001 && d < 26) {
+            const push = (26 - d) * 0.4 * s * dt;
+            moveBlocked(ch, (dx / d) * push, 0, 12);
+            moveBlocked(ch, 0, (dy / d) * push, 12);
+          }
+        });
         E.players.forEach((p) => {
           if (p.lives !== 0 && p.inv <= 0 && Math.abs(p.x - ch.x) < 20 && Math.abs(p.y - ch.y) < 20) {
             if (p.lives > 0) {
@@ -451,8 +492,8 @@ window.Games = (function () {
       E.gems.forEach((g) => {
         if (!g.got) ctx.fillRect(g.x - 3, g.y - 3, 6, 6);
       });
-      ctx.fillStyle = C.fg;
       E.chasers.forEach((ch) => {
+        ctx.fillStyle = ch.color || C.fg;
         ctx.beginPath();
         ctx.arc(ch.x, ch.y, 11, 0, Math.PI * 2);
         ctx.fill();
@@ -833,5 +874,15 @@ window.Games = (function () {
     cancelAnimationFrame(raf);
   }
 
-  return { init, start, stop, fit, palettes: PALETTES };
+  /** End the current game early (e.g. player pressed ESC) and report the live score. */
+  function quit() {
+    if (!running) return;
+    if (!ended) {
+      ended = true;
+      outcome = "quit";
+    }
+    finish();
+  }
+
+  return { init, start, stop, quit, fit, palettes: PALETTES };
 })();

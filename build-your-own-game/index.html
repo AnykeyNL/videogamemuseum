@@ -83,6 +83,16 @@
         </div>
       </section>
 
+      <!-- Deep-link title screen (opened from a QR code) -->
+      <section id="screen-title" class="screen" aria-hidden="true">
+        <div class="title-inner">
+          <p class="title-kicker">nationaalvideogamemuseum</p>
+          <h1 id="title-name" class="title-name">GAME</h1>
+          <p id="title-sub" class="title-sub"></p>
+          <p id="title-play" class="title-play blink">PRESS SPACE TO PLAY</p>
+        </div>
+      </section>
+
       <!-- Game -->
       <section id="screen-game" class="screen" aria-hidden="true">
         <div class="status-bar">
@@ -102,6 +112,10 @@
         <div class="results-inner">
           <h2 id="results-title" class="results-title">GAME OVER</h2>
           <p id="results-body" class="results-body"></p>
+          <div class="results-qr">
+            <canvas id="qr-canvas" class="qr-canvas" aria-label="QR code link to this game"></canvas>
+            <p id="qr-label" class="qr-label"></p>
+          </div>
           <p id="results-countdown" class="results-countdown blink"></p>
         </div>
       </section>
@@ -110,6 +124,7 @@
 
   <script src="i18n.js"></script>
   <script src="content.js"></script>
+  <script src="qrcode.js"></script>
   <script src="games.js"></script>
   <script src="app.js"></script>
 </body>

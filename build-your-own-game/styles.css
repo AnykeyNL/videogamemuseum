@@ -363,6 +363,7 @@ body {
 }
 
 .option-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -376,6 +377,28 @@ body {
   border: max(2px, calc(var(--c64-unit) * 0.1)) solid var(--scr-fg, var(--c64-light-blue));
   border-radius: 3px;
   cursor: pointer;
+}
+
+.option-btn.has-icon {
+  padding-right: calc(var(--c64-unit) * 5.5);
+}
+
+.option-icon {
+  position: absolute;
+  top: calc(var(--c64-unit) * 0.6);
+  right: calc(var(--c64-unit) * 0.6);
+  height: calc(var(--c64-unit) * 2.4);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.option-icon .sprite {
+  height: 100%;
+  width: auto;
+  max-width: calc(var(--c64-unit) * 5);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .option-btn:hover,
@@ -728,6 +751,74 @@ body {
 
 .results-countdown {
   margin: 0;
+  font-size: var(--fs-help);
+  color: var(--scr-accent, var(--c64-cyan));
+}
+
+.results-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--c64-unit) * 0.8);
+  margin: 0 0 calc(var(--c64-unit) * 1.4);
+}
+
+.qr-canvas {
+  width: clamp(240px, 44vmin, 440px);
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: calc(var(--c64-unit) * 0.4) solid var(--scr-fg, var(--c64-light-blue));
+  padding: calc(var(--c64-unit) * 0.5);
+  background: var(--scr-bg, var(--c64-blue));
+}
+
+.qr-label {
+  margin: 0;
+  font-size: var(--fs-help);
+  color: var(--scr-accent, var(--c64-cyan));
+}
+
+/* ---- Deep-link title screen ---- */
+#screen-title {
+  text-align: center;
+}
+
+.title-inner {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--c64-unit) * 1.4);
+  padding: 0 calc(var(--c64-unit) * 1.5);
+}
+
+.title-kicker {
+  margin: 0;
+  font-size: var(--fs-help);
+  letter-spacing: 0.12em;
+  color: var(--scr-accent, var(--c64-cyan));
+  text-transform: lowercase;
+}
+
+.title-name {
+  margin: 0;
+  font-size: clamp(1.6rem, 7vmin, 4rem);
+  line-height: 1.15;
+  color: var(--scr-hi, var(--c64-yellow));
+  text-shadow: calc(var(--c64-unit) * 0.5) calc(var(--c64-unit) * 0.5) 0 var(--scr-bg-deep, rgba(0, 0, 0, 0.5));
+  word-break: break-word;
+}
+
+.title-sub {
+  margin: 0;
+  font-size: var(--fs-line);
+  color: var(--scr-fg, var(--c64-light-blue));
+  text-transform: uppercase;
+}
+
+.title-play {
+  margin: calc(var(--c64-unit) * 1.2) 0 0;
   font-size: var(--fs-help);
   color: var(--scr-accent, var(--c64-cyan));
 }
