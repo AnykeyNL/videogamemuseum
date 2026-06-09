@@ -144,6 +144,27 @@ ln -sf "$NGINX_SITE" "/etc/nginx/sites-enabled/${SERVICE_NAME}.conf"
 nginx -t
 systemctl reload nginx
 
+# --- open the host firewall for HTTP/HTTPS ----------------------------------
+# Note: this only opens the *host* firewall. On cloud VMs you ALSO need to allow
+# inbound TCP 80 and 443 in the provider's firewall (e.g. Oracle Cloud Security
+# List / Network Security Group), or Let's Encrypt cannot reach this server.
+log "Opening host firewall for ports 80 and 443"
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+  ufw allow 80/tcp || true
+  ufw allow 443/tcp || true
+fi
+if command -v iptables >/dev/null 2>&1; then
+  for p in 80 443; do
+    iptables -C INPUT -p tcp --dport "$p" -j ACCEPT 2>/dev/null \
+      || iptables -I INPUT -p tcp --dport "$p" -j ACCEPT
+  done
+  if command -v netfilter-persistent >/dev/null 2>&1; then
+    netfilter-persistent save || true
+  elif [ -d /etc/iptables ]; then
+    iptables-save > /etc/iptables/rules.v4 || true
+  fi
+fi
+
 # --- TLS via Let's Encrypt --------------------------------------------------
 log "Installing certbot and requesting a certificate"
 apt-get install -y certbot python3-certbot-nginx
@@ -151,11 +172,29 @@ apt-get install -y certbot python3-certbot-nginx
 CERTBOT_DOMAINS=(-d "$DOMAIN")
 [ "$INCLUDE_WWW" = "true" ] && CERTBOT_DOMAINS+=(-d "www.${DOMAIN}")
 
+set +e
 certbot --nginx \
   "${CERTBOT_DOMAINS[@]}" \
   --non-interactive --agree-tos \
   -m "$LETSENCRYPT_EMAIL" \
   --redirect
+CERTBOT_RC=$?
+set -e
+
+if [ "$CERTBOT_RC" -ne 0 ]; then
+  printf '\n\033[1;31m==> Certbot could not obtain a certificate yet.\033[0m\n'
+  echo "The app is running over HTTP, but HTTPS is not set up. The usual cause is"
+  echo "that ports 80/443 are not reachable from the internet."
+  echo
+  echo "Check, then re-run sudo ./install.sh:"
+  echo "  1. Cloud firewall: allow inbound TCP 80 and 443."
+  echo "     (Oracle Cloud: VCN -> Security Lists -> add ingress 0.0.0.0/0 tcp 80 and 443.)"
+  echo "  2. DNS: ${DOMAIN} must resolve to THIS server's public IP."
+  echo "  3. Test from another network: curl -I http://${DOMAIN}/"
+  echo
+  echo "Site (HTTP for now): http://${DOMAIN}/"
+  exit 1
+fi
 
 nginx -t
 systemctl reload nginx
