@@ -726,6 +726,73 @@ body {
   flex-shrink: 0;
 }
 
+/* ---- On-screen touch controls (mobile) ---- */
+.touch-controls {
+  display: none;
+}
+
+.touch-controls.active {
+  --touch-size: clamp(44px, 13vmin, 64px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(var(--c64-unit) * 1);
+  margin-top: calc(var(--c64-unit) * 0.6);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.touch-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, var(--touch-size, 58px));
+  grid-template-rows: repeat(3, var(--touch-size, 58px));
+  gap: calc(var(--c64-unit) * 0.4);
+}
+
+.touch-action {
+  display: flex;
+  align-items: center;
+}
+
+.touch-btn {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(14px, 4vmin, 22px);
+  color: var(--scr-hi, var(--c64-yellow));
+  background: var(--scr-bg, var(--c64-blue));
+  border: 2px solid var(--scr-fg, var(--c64-light-blue));
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn.pressed {
+  background: var(--scr-fg, var(--c64-light-blue));
+  color: var(--scr-bg, var(--c64-blue));
+}
+
+.touch-btn.hidden {
+  display: none;
+}
+
+.t-up { grid-area: 1 / 2 / 2 / 3; }
+.t-left { grid-area: 2 / 1 / 3 / 2; }
+.t-right { grid-area: 2 / 3 / 3 / 4; }
+.t-down { grid-area: 3 / 2 / 4 / 3; }
+
+.t-fire {
+  width: calc(var(--touch-size, 58px) * 1.5);
+  height: calc(var(--touch-size, 58px) * 1.5);
+  border-radius: 50%;
+  color: var(--scr-accent, var(--c64-cyan));
+}
+
 /* Results */
 #screen-results.screen.active {
   justify-content: center;

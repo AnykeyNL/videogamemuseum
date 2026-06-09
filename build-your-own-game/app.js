@@ -58,6 +58,12 @@
   const titleName = $("title-name");
   const titleSub = $("title-sub");
   const titlePlay = $("title-play");
+  const touchControls = $("touch-controls");
+  const touchButtons = touchControls ? Array.from(touchControls.querySelectorAll(".touch-btn")) : [];
+  const IS_TOUCH =
+    (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches) ||
+    "ontouchstart" in window ||
+    (navigator.maxTouchPoints || 0) > 0;
 
   const SHARE_BASE_URL = "https://museum.makerdad.nl/";
   const GENRES = ["shooter", "maze", "dodge", "paddle"];
@@ -109,6 +115,39 @@
       screens[k].setAttribute("aria-hidden", on ? "false" : "true");
     });
     if (name === "game") setTimeout(() => Games.fit(), 0);
+    if (touchControls) {
+      const showCtl = IS_TOUCH && name === "game";
+      if (showCtl) applyTouchScheme();
+      touchControls.classList.toggle("active", showCtl);
+      touchControls.setAttribute("aria-hidden", showCtl ? "false" : "true");
+      if (!showCtl) releaseTouchKeys();
+    }
+  }
+
+  /* ---------- on-screen touch controls (mobile) ---------- */
+  // Only the buttons a given game actually uses are shown. Codes match the
+  // single-player keyboard scheme each engine reads.
+  function touchSchemeFor(c) {
+    if (c.genre === "shooter") return { ArrowLeft: 1, ArrowRight: 1, Space: 1 };
+    if (c.genre === "maze") return { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1 };
+    if (c.genre === "dodge") return { ArrowLeft: 1, ArrowRight: 1 };
+    // paddle: breakout moves left/right, pong / pong-vs-cpu move up/down
+    const breakout = c.players === 1 && !c.enemies;
+    return breakout ? { ArrowLeft: 1, ArrowRight: 1 } : { ArrowUp: 1, ArrowDown: 1 };
+  }
+
+  function applyTouchScheme() {
+    const sc = touchSchemeFor(config);
+    touchButtons.forEach((b) => {
+      b.classList.toggle("hidden", !sc[b.getAttribute("data-code")]);
+    });
+  }
+
+  function releaseTouchKeys() {
+    touchButtons.forEach((b) => {
+      Games.setKey(b.getAttribute("data-code"), false);
+      b.classList.remove("pressed");
+    });
   }
 
   function applyPalette(p) {
@@ -917,6 +956,27 @@
   btnNext.addEventListener("click", nextStep);
   btnSave.addEventListener("click", confirmName);
   btnRun.addEventListener("click", launchGame);
+
+  /* ---------- touch control wiring ---------- */
+  touchButtons.forEach((b) => {
+    const code = b.getAttribute("data-code");
+    const press = (e) => {
+      e.preventDefault();
+      markActivity();
+      Games.setKey(code, true);
+      b.classList.add("pressed");
+    };
+    const release = (e) => {
+      if (e && e.cancelable) e.preventDefault();
+      Games.setKey(code, false);
+      b.classList.remove("pressed");
+    };
+    b.addEventListener("pointerdown", press);
+    b.addEventListener("pointerup", release);
+    b.addEventListener("pointercancel", release);
+    b.addEventListener("pointerleave", release);
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+  });
 
   document.addEventListener("fullscreenchange", () => Games.fit());
   document.addEventListener("webkitfullscreenchange", () => Games.fit());

@@ -884,5 +884,14 @@ window.Games = (function () {
     finish();
   }
 
-  return { init, start, stop, quit, fit, palettes: PALETTES };
+  /** Inject a virtual key state (used by the on-screen mobile touch controls). */
+  function setKey(code, isDown) {
+    keys[code] = !!isDown;
+  }
+
+  function clearKeys() {
+    for (const k in keys) keys[k] = false;
+  }
+
+  return { init, start, stop, quit, setKey, clearKeys, fit, palettes: PALETTES };
 })();
