@@ -364,7 +364,7 @@ window.Games = (function () {
       els.statusLeft.textContent = "P1 " + p1;
       els.statusRight.textContent = p2 + " P2";
     } else {
-      els.statusLeft.textContent = String(score);
+      els.statusLeft.textContent = String(Math.floor(score));
       els.statusRight.textContent = lives >= 0 ? "x" + lives : "";
     }
   }

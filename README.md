@@ -1,4 +1,4 @@
-# Museum
+# Nationaal Video Game Museum - Retro build-your-own-game
 
 A small collection of retro, Commodore 64-styled web experiences built as interactive exhibits for a video game museum. Everything runs in a normal web browser but is dressed up to look and feel like a 1980s C64 (CRT bezel, scanlines, blocky pixel font, blue screen, SID-style bleeps).
 

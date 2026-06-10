@@ -66,7 +66,13 @@
     "ontouchstart" in window ||
     (navigator.maxTouchPoints || 0) > 0;
 
-  const SHARE_BASE_URL = "https://museum.makerdad.nl/";
+  // Base URL encoded into the results-screen QR code. Set via config.js
+  // (generated from deploy.config on deploy); falls back to a sane default.
+  const SHARE_BASE_URL = (function () {
+    let u = (window.QR_BASE_URL || "https://example.com/").trim();
+    if (!/\/$/.test(u)) u += "/"; // buildGameUrl appends "?...", so keep a trailing slash
+    return u;
+  })();
   const GENRES = ["shooter", "maze", "dodge", "paddle"];
   const THEMES = ["space", "jungle", "castle", "neon"];
   const SPEEDS = ["chill", "normal", "fast", "turbo"];

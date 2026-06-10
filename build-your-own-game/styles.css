@@ -677,7 +677,17 @@ body {
   flex-shrink: 0;
 }
 
+.status-score {
+  flex: 1 1 0;
+}
+
+#status-right {
+  text-align: right;
+}
+
 .status-mid {
+  flex: 0 0 auto;
+  text-align: center;
   font-size: calc(var(--fs-score) * 0.62);
   color: var(--scr-hi, var(--c64-yellow));
 }

@@ -21,6 +21,11 @@ INCLUDE_WWW="false"
 # (Matches the default in build-your-own-game/server.mjs.)
 APP_PORT="3848"
 
+# Base URL encoded into the QR code shown on the results screen (visitors scan
+# it to replay their game on their phone). A trailing slash is added if missing.
+# Leave empty to default to "https://<DOMAIN>/".
+QR_BASE_URL=""
+
 # OS user the systemd service runs as. The app is copied to /opt and runs as
 # this dedicated, locked-down system user (created automatically if missing).
 # Usually no need to change this.
