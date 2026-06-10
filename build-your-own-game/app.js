@@ -97,6 +97,7 @@
   let resultTimer = null;
   let lastActivity = Date.now();
   let isDeepLink = false; // launched via a direct QR/share link (skip the build flow + QR results)
+  let skipCode = false; // secret: shift+select language to hide the fake BASIC listing between steps
 
   Games.init({
     canvas: $("game-canvas"),
@@ -450,7 +451,7 @@
       btn.type = "button";
       btn.className = "flag-btn";
       btn.innerHTML = FLAGS[meta.flag] + "<span>" + meta.name + "</span>";
-      btn.addEventListener("click", () => chooseLanguage(code));
+      btn.addEventListener("click", (e) => chooseLanguage(code, e.shiftKey));
       btn.addEventListener("mouseenter", () => setSelectedLang(i));
       langGrid.appendChild(btn);
     });
@@ -482,9 +483,10 @@
     applyLangHighlight();
   }
 
-  function chooseLanguage(code) {
+  function chooseLanguage(code, fast) {
     lang = code;
     L = I18N[code];
+    skipCode = !!fast; // hold Shift while selecting to skip the fake-code typing
     stepIndex = 0;
     totalHours = 0;
     config = { players: 1, enemies: false, genre: "paddle", theme: "space", speed: "normal", speedFactor: 1, palette: "blue", gameName: "" };
@@ -603,6 +605,13 @@
 
     // Q5 palette gives a live recolour of the whole screen.
     if (q.id === "palette") applyPalette(config.palette);
+
+    // Secret fast mode: skip the fake BASIC listing and jump straight to the next step.
+    if (skipCode) {
+      typingDone = true;
+      nextStep();
+      return;
+    }
 
     stepQuestion.classList.add("hidden");
     stepTyping.classList.remove("hidden");
@@ -902,7 +911,7 @@
       const lidx = parseInt(e.key, 10);
       if (lidx >= 1 && lidx <= LANG_ORDER.length) {
         e.preventDefault();
-        chooseLanguage(LANG_ORDER[lidx - 1]);
+        chooseLanguage(LANG_ORDER[lidx - 1], e.shiftKey);
         return;
       }
       switch (e.code) {
@@ -929,7 +938,7 @@
         case "Enter":
         case "Space":
           e.preventDefault();
-          chooseLanguage(LANG_ORDER[selectedLang]);
+          chooseLanguage(LANG_ORDER[selectedLang], e.shiftKey);
           break;
       }
       return;
