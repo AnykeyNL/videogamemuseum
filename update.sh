@@ -31,7 +31,8 @@ if [ -z "${UPDATE_SYNCED:-}" ] && [ -d "${ROOT_DIR}/.git" ] && command -v git >/
         printf '\n\033[1;36m==> Syncing checkout to origin/%s (discarding local edits to tracked files)\033[0m\n' "$BRANCH"
       fi
       git -C "$ROOT_DIR" reset --hard "origin/${BRANCH}"
-      UPDATE_SYNCED=1 exec "$0" "$@"
+      chmod +x "${ROOT_DIR}/update.sh" "${ROOT_DIR}/install.sh" 2>/dev/null || true
+      UPDATE_SYNCED=1 exec bash "$0" "$@"
     fi
   fi
 fi
