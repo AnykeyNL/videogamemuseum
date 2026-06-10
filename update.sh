@@ -13,6 +13,29 @@ set -euo pipefail
 
 # --- locate ourselves -------------------------------------------------------
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# --- sync checkout with remote (bootstrap) ----------------------------------
+# Deployment checkouts should mirror origin exactly. Fetch + hard-reset discards
+# accidental local edits to tracked files (including this script). Re-exec after
+# reset so the rest of the run uses the freshly checked-out update.sh — otherwise
+# bash keeps executing the old in-memory copy and `git pull` can still fail.
+if [ -z "${UPDATE_SYNCED:-}" ] && [ -d "${ROOT_DIR}/.git" ] && command -v git >/dev/null 2>&1; then
+  git config --global --add safe.directory "$ROOT_DIR" 2>/dev/null || true
+  BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+  [ "$BRANCH" != "HEAD" ] || BRANCH="main"
+  if git -C "$ROOT_DIR" fetch --prune origin "$BRANCH" 2>/dev/null \
+    || git -C "$ROOT_DIR" fetch --prune origin 2>/dev/null; then
+    if git -C "$ROOT_DIR" rev-parse --verify "origin/${BRANCH}" >/dev/null 2>&1; then
+      if ! git -C "$ROOT_DIR" diff --quiet "origin/${BRANCH}" 2>/dev/null \
+        || ! git -C "$ROOT_DIR" diff --quiet || ! git -C "$ROOT_DIR" diff --cached --quiet; then
+        printf '\n\033[1;36m==> Syncing checkout to origin/%s (discarding local edits to tracked files)\033[0m\n' "$BRANCH"
+      fi
+      git -C "$ROOT_DIR" reset --hard "origin/${BRANCH}"
+      UPDATE_SYNCED=1 exec "$0" "$@"
+    fi
+  fi
+fi
+
 APP_DIR="${ROOT_DIR}/build-your-own-game"
 CONFIG_FILE="${ROOT_DIR}/deploy.config"
 
@@ -39,24 +62,16 @@ if [ -f "$CONFIG_FILE" ]; then
 fi
 id "$SERVICE_USER" >/dev/null 2>&1 || die "Service user '${SERVICE_USER}' does not exist. Run sudo ./install.sh first."
 
-# --- pull latest code -------------------------------------------------------
-# This is a deployment checkout: it should mirror the remote exactly. We fetch
-# and hard-reset to the remote branch so accidental local edits to tracked files
-# (e.g. install.sh) don't block the update with "local changes would be
-# overwritten". Untracked files (like deploy.config) are left untouched.
-log "Fetching latest code in ${ROOT_DIR}"
-# git refuses to operate on a repo owned by another user (we're root); allow it.
+# --- pull latest code (already synced at startup; log revision for clarity) ---
+log "Checking out latest code in ${ROOT_DIR}"
 git config --global --add safe.directory "$ROOT_DIR" 2>/dev/null || true
 
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
 [ "$BRANCH" != "HEAD" ] || BRANCH="main"
 BEFORE="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || echo none)"
 
-git -C "$ROOT_DIR" fetch origin "$BRANCH"
-
-if ! git -C "$ROOT_DIR" diff --quiet || ! git -C "$ROOT_DIR" diff --cached --quiet; then
-  log "Discarding local changes to tracked files (mirroring origin/${BRANCH})"
-fi
+git -C "$ROOT_DIR" fetch --prune origin "$BRANCH" 2>/dev/null \
+  || git -C "$ROOT_DIR" fetch --prune origin
 git -C "$ROOT_DIR" reset --hard "origin/${BRANCH}"
 
 AFTER="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || echo none)"
