@@ -23,6 +23,19 @@ window.Games = (function () {
     mono: { bg: "#050510", fg: "#e8e8ff", accent: "#80ffff", hi: "#ffff80", dim: "#33334d" },
   };
 
+  /*
+   * Worlds (Q3 theme). Each world paints a full, animated background scene and
+   * supplies a `tint` colour used for that world's hazards/enemies, so every
+   * game looks unmistakably different per world. Backgrounds stay dark so the
+   * palette-coloured player sprites keep good contrast on top.
+   */
+  const THEMES = {
+    space: { top: "#05030f", bottom: "#0c0a26", tint: "#79d0ff", draw: drawSpace },
+    jungle: { top: "#08160b", bottom: "#0e2614", tint: "#7dff8a", draw: drawJungle },
+    castle: { top: "#15141c", bottom: "#241f2c", tint: "#ffc15a", draw: drawCastle },
+    neon: { top: "#0b0422", bottom: "#1b0a38", tint: "#ff4cd2", draw: drawNeon },
+  };
+
   let canvas, ctx, els, stage;
   let raf = 0;
   let running = false;
@@ -32,6 +45,7 @@ window.Games = (function () {
   let cfg = null;
   let lang = null;
   let C = PALETTES.blue; // active colors
+  let TH = THEMES.space; // active world
   let onEnd = null;
 
   let roundEndAt = 0;
@@ -146,37 +160,188 @@ window.Games = (function () {
   }
 
   /* ---------- shared drawing ---------- */
-  function clearBg() {
-    ctx.fillStyle = C.bg;
+  /* Paint the active world: vertical gradient sky + the world's own scene. */
+  function drawWorld() {
+    const t = performance.now() / 1000;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, TH.top);
+    g.addColorStop(1, TH.bottom);
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-  }
-  function drawBackdrop() {
-    // light, theme-flavoured decoration
     ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = C.dim;
-    const th = cfg.theme;
-    if (th === "space") {
-      for (let i = 0; i < 50; i++) {
-        const x = (i * 71) % W;
-        const y = (i * 113) % H;
-        ctx.fillRect(x, y, 2, 2);
-      }
-    } else if (th === "jungle") {
-      for (let i = 0; i < 10; i++) {
-        const x = (i * 67) % W;
-        ctx.fillRect(x, 0, 6, H);
-      }
-    } else if (th === "castle") {
-      for (let x = 0; x < W; x += 32) ctx.fillRect(x, H - 16, 24, 16);
-    } else if (th === "neon") {
-      for (let i = 0; i < 8; i++) {
-        const x = (i * 83) % W;
-        const h = 60 + ((i * 53) % 160);
-        ctx.fillRect(x, H - h, 26, h);
+    TH.draw(t);
+    ctx.restore();
+  }
+
+  /* ===== world: SPACE ===== twinkling starfield + ringed planet ===== */
+  function drawSpace(t) {
+    for (let i = 0; i < 80; i++) {
+      const x = (i * 97) % W;
+      const y = (i * 61) % H;
+      const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * 1.8 + i));
+      ctx.globalAlpha = tw;
+      ctx.fillStyle = i % 9 === 0 ? TH.tint : "#ffffff";
+      const s = i % 13 === 0 ? 2 : 1;
+      ctx.fillRect(x, y, s, s);
+    }
+    ctx.globalAlpha = 1;
+    // ringed planet, top-right
+    const px = W - 92, py = 78;
+    ctx.fillStyle = "#3a2a6a";
+    ctx.beginPath();
+    ctx.arc(px, py, 44, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#5847a0";
+    ctx.beginPath();
+    ctx.arc(px + 12, py - 10, 44, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(150,180,255,0.55)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(px, py, 70, 18, -0.5, 0, Math.PI * 2);
+    ctx.stroke();
+    // slow shooting star
+    const sx = (t * 220) % (W + 200) - 100;
+    const sy = 40 + ((t * 60) % 120);
+    ctx.strokeStyle = "rgba(180,220,255,0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx - 26, sy - 10);
+    ctx.stroke();
+  }
+
+  /* ===== world: JUNGLE ===== trunks, canopy, swaying vines, ferns ===== */
+  function drawJungle(t) {
+    // far trunks
+    ctx.fillStyle = "#23341c";
+    for (let i = 0; i < 5; i++) ctx.fillRect(40 + i * 142, 0, 20, H);
+    // top canopy of overlapping leaves
+    ctx.fillStyle = "#14401d";
+    for (let x = -10; x < W + 40; x += 42) {
+      const r = 28 + ((x * 7) % 18);
+      ctx.beginPath();
+      ctx.arc(x, 6, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // swaying vines with leaf tips
+    for (let i = 0; i < 8; i++) {
+      const x = 28 + i * 80;
+      const sway = Math.sin(t * 1.3 + i) * 12;
+      ctx.strokeStyle = "#2f7a35";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.quadraticCurveTo(x + sway, 80, x + sway * 0.6, 150);
+      ctx.stroke();
+      ctx.fillStyle = "#3ea045";
+      ctx.beginPath();
+      ctx.arc(x + sway * 0.6, 150, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // ground ferns
+    ctx.fillStyle = "#10301a";
+    for (let x = 0; x < W; x += 28) {
+      ctx.beginPath();
+      ctx.moveTo(x, H);
+      ctx.lineTo(x + 14, H - 26);
+      ctx.lineTo(x + 28, H);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  /* ===== world: CASTLE ===== brick wall, battlements, flickering torches ===== */
+  function drawCastle(t) {
+    // mortar grid
+    const bw = 48, bh = 24;
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 2;
+    for (let r = 0; r * bh < H; r++) {
+      const off = (r % 2) * (bw / 2);
+      for (let c = -1; c * bw < W; c++) ctx.strokeRect(c * bw + off, r * bh, bw, bh);
+    }
+    // battlements along the top
+    ctx.fillStyle = "#2b2733";
+    ctx.fillRect(0, 0, W, 24);
+    for (let x = 0; x < W; x += 48) ctx.fillRect(x, 0, 24, 40);
+    // wall-mounted torches
+    for (let i = 0; i < 3; i++) {
+      const x = 120 + i * 200;
+      ctx.fillStyle = "#3a2a18";
+      ctx.fillRect(x - 2, 58, 4, 26);
+      const fl = 0.55 + 0.45 * Math.abs(Math.sin(t * 9 + i * 2));
+      ctx.globalAlpha = fl;
+      const grd = ctx.createRadialGradient(x, 54, 2, x, 54, 24);
+      grd.addColorStop(0, "#ffd36a");
+      grd.addColorStop(1, "rgba(255,120,0,0)");
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(x, 54, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#ff8c1a";
+      ctx.beginPath();
+      ctx.ellipse(x, 52, 5, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffe07a";
+      ctx.beginPath();
+      ctx.ellipse(x, 54, 2.5, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* ===== world: NEON CITY ===== synthwave sun, skyline, perspective grid ===== */
+  function drawNeon(t) {
+    const horizon = H * 0.52;
+    // synthwave sun with horizontal bars
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(W / 2, horizon, 62, 0, Math.PI * 2);
+    ctx.clip();
+    const sg = ctx.createLinearGradient(0, horizon - 62, 0, horizon + 62);
+    sg.addColorStop(0, "#ffe24a");
+    sg.addColorStop(0.5, "#ff5bd0");
+    sg.addColorStop(1, "#a01a8f");
+    ctx.fillStyle = sg;
+    ctx.fillRect(W / 2 - 62, horizon - 62, 124, 124);
+    ctx.fillStyle = "rgba(11,4,34,0.9)";
+    for (let i = 0; i < 6; i++) ctx.fillRect(W / 2 - 62, horizon + 4 + i * 9, 124, 3 + i);
+    ctx.restore();
+    // skyline silhouette with glowing windows
+    const cols = 14, cw = W / cols;
+    for (let i = 0; i < cols; i++) {
+      const x = i * cw;
+      const h = 40 + ((i * 53) % 70);
+      ctx.fillStyle = "#160a2e";
+      ctx.fillRect(x, horizon - h, cw - 4, h);
+      ctx.fillStyle = i % 2 ? "#21e0ff" : "#ff4cd2";
+      for (let wy = horizon - h + 6; wy < horizon - 6; wy += 12) {
+        for (let wx = x + 4; wx < x + cw - 8; wx += 10) {
+          if ((wx + wy + ((t * 2) | 0)) % 3 === 0) ctx.fillRect(wx, wy, 4, 5);
+        }
       }
     }
-    ctx.restore();
+    // perspective floor grid
+    ctx.strokeStyle = "rgba(255,76,210,0.45)";
+    ctx.lineWidth = 2;
+    for (let i = -10; i <= 10; i++) {
+      ctx.beginPath();
+      ctx.moveTo(W / 2, horizon);
+      ctx.lineTo(W / 2 + i * 64, H);
+      ctx.stroke();
+    }
+    let yy = horizon, step = 4;
+    const scroll = (t * 18) % 6;
+    while (yy < H) {
+      const y = yy + scroll;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+      step *= 1.28;
+      yy += step;
+    }
   }
   function text(str, x, y, size, color, align) {
     ctx.fillStyle = color || C.hi;
@@ -329,13 +494,12 @@ window.Games = (function () {
       if (E.enemies.every((e) => !e.alive)) spawnWave();
     },
     draw() {
-      clearBg();
-      drawBackdrop();
+      drawWorld();
       E.enemies.forEach((e) => {
         if (!e.alive) return;
-        ctx.fillStyle = C.fg;
+        ctx.fillStyle = TH.tint;
         ctx.fillRect(e.x - 12, e.y - 8, 24, 16);
-        ctx.fillStyle = C.bg;
+        ctx.fillStyle = "#0a0a14";
         ctx.fillRect(e.x - 6, e.y - 2, 4, 4);
         ctx.fillRect(e.x + 2, e.y - 2, 4, 4);
       });
@@ -415,7 +579,7 @@ window.Games = (function () {
             x: spots[i][0],
             y: spots[i][1],
             spd: slow ? 0.6 : 1,
-            color: slow ? C.accent : C.fg,
+            color: slow ? C.accent : TH.tint,
           });
         }
       }
@@ -485,7 +649,7 @@ window.Games = (function () {
       }
     },
     draw() {
-      clearBg();
+      drawWorld();
       ctx.fillStyle = C.dim;
       E.walls.forEach((wl) => ctx.fillRect(wl.x, wl.y, wl.w, wl.h));
       ctx.fillStyle = C.accent;
@@ -595,10 +759,9 @@ window.Games = (function () {
       }
     },
     draw() {
-      clearBg();
-      drawBackdrop();
+      drawWorld();
       const py = H - 30;
-      ctx.fillStyle = C.fg;
+      ctx.fillStyle = TH.tint;
       E.obs.forEach((o) => ctx.fillRect(o.x - o.w / 2, o.y - 8, o.w, 16));
       E.players.forEach((p) => {
         if (p.lives === 0) return;
@@ -731,13 +894,13 @@ window.Games = (function () {
       }
     },
     draw() {
-      clearBg();
+      drawWorld();
       if (E.mode === "breakout") {
         E.bricks.forEach((b) => {
           if (!b.on) return;
-          ctx.fillStyle = C.fg;
+          ctx.fillStyle = TH.tint;
           ctx.fillRect(b.x, b.y, b.w, b.h);
-          ctx.strokeStyle = C.bg;
+          ctx.strokeStyle = "rgba(0,0,0,0.45)";
           ctx.strokeRect(b.x, b.y, b.w, b.h);
         });
         ctx.fillStyle = C.hi;
@@ -847,6 +1010,7 @@ window.Games = (function () {
     lang = langStrings;
     onEnd = endCb;
     C = PALETTES[config.palette] || PALETTES.blue;
+    TH = THEMES[config.theme] || THEMES.space;
     engine = ENGINES[config.genre] || ENGINES.paddle;
     score = 0;
     p1 = 0;
