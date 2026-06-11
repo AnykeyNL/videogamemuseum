@@ -799,7 +799,8 @@ window.Games = (function () {
         E.by = H / 2;
         E.vx = (Math.random() < 0.5 ? -1 : 1) * 4 * sf();
         E.vy = rnd(-2, 2) * sf();
-        lives = -1;
+        // vs CPU: missing the ball costs one of 3 lives; 2-player pong has none
+        lives = E.mode === "pongcpu" ? 3 : -1;
       }
     },
     update(dt) {
@@ -880,9 +881,19 @@ window.Games = (function () {
         E.vx = clamp(E.vx, -9, 9);
         E.vy = clamp(E.vy, -7, 7);
         if (E.bx < 0) {
-          p2 += 1;
-          Audio.point();
-          resetPong(1);
+          if (E.mode === "pongcpu") {
+            lives -= 1;
+            Audio.hit();
+            if (lives <= 0) {
+              endGame("lose");
+            } else {
+              resetPong(1);
+            }
+          } else {
+            p2 += 1;
+            Audio.point();
+            resetPong(1);
+          }
         } else if (E.bx > W) {
           p1 += 1;
           Audio.point();
@@ -890,7 +901,7 @@ window.Games = (function () {
         }
         score = p1;
         if (p1 >= 7) endGame(cfg.players === 2 ? "p1" : "win");
-        else if (p2 >= 7) endGame(cfg.players === 2 ? "p2" : "lose");
+        else if (cfg.players === 2 && p2 >= 7) endGame("p2");
       }
     },
     draw() {
