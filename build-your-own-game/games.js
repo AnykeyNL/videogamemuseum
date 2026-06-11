@@ -871,7 +871,12 @@ window.Games = (function () {
         if (E.vx < 0 && E.bx < 36 && E.by > E.lY && E.by < E.lY + E.padH) {
           E.vx = Math.abs(E.vx) * 1.04;
           E.vy += ((E.by - (E.lY + E.padH / 2)) / (E.padH / 2)) * 2;
-          Audio.bounce();
+          if (E.mode === "pongcpu") {
+            p1 += 1; // vs CPU: every successful return scores a point
+            Audio.point();
+          } else {
+            Audio.bounce();
+          }
         }
         if (E.vx > 0 && E.bx > W - 36 && E.by > E.rY && E.by < E.rY + E.padH) {
           E.vx = -Math.abs(E.vx) * 1.04;
@@ -895,13 +900,15 @@ window.Games = (function () {
             resetPong(1);
           }
         } else if (E.bx > W) {
-          p1 += 1;
+          p1 += E.mode === "pongcpu" ? 5 : 1; // beating the CPU is worth a bonus
           Audio.point();
           resetPong(-1);
         }
         score = p1;
-        if (p1 >= 7) endGame(cfg.players === 2 ? "p1" : "win");
-        else if (cfg.players === 2 && p2 >= 7) endGame("p2");
+        if (cfg.players === 2) {
+          if (p1 >= 7) endGame("p1");
+          else if (p2 >= 7) endGame("p2");
+        }
       }
     },
     draw() {
